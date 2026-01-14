@@ -1,4 +1,4 @@
-# 🎨 ComfyUI Prompt Expander
+# 🎨 ComfyUI Prompt Tuner
 
 An LLM-powered prompt expansion node for ComfyUI. Transform simple prompts into detailed, high-quality image generation prompts.
 
@@ -16,15 +16,11 @@ An LLM-powered prompt expansion node for ComfyUI. Transform simple prompts into 
 
 ## 📦 Installation
 
-### Method 1: ComfyUI Manager (Recommended)
-
-Search for "Prompt Expander" in ComfyUI Manager and install.
-
-### Method 2: Manual Installation
+Manual Installation via GIT
 
 ```bash
 cd ComfyUI/custom_nodes
-git clone https://github.com/bozkut/ComfyUI-Prompt-Expander.git
+git clone https://github.com/peteclt92/ComfyUI-Prompt-Tuner.git
 ```
 
 Restart ComfyUI after installation.
@@ -68,7 +64,7 @@ ollama serve
 
 ## 🎯 Usage
 
-### Node: `🎨 Prompt Expander (LLM)`
+### Node: `🎨 Prompt Tuner (LLM)`
 
 Located in: **bozkut/AI**
 
@@ -112,7 +108,7 @@ dramatic lighting, movie still quality
 
 ```
 ┌─────────────────────┐
-│  🎨 Prompt Expander │
+│  🎨 Prompt Tuner │
 │  "simple prompt"    │
 └──┬──────────────┬───┘
    │              │
