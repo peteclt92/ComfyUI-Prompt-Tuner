@@ -14,6 +14,7 @@ An LLM-powered prompt tuning node for ComfyUI. Turn short prompts into detailed,
 - ✅ **Positive + Negative** prompt output (toggleable)
 - 🧩 **Custom instructions** with a clean override/merge model
 - 🪲 **Debug output (advanced node)**: exposes the exact **system prompt** sent to the LLM
+- 🧯 Groq **deprecated model ID remap** to avoid hard failures in older workflows
 
 ## 📦 Installation
 
@@ -79,7 +80,9 @@ a leopard resting on a large tree branch, three-quarter profile view
 **Inputs**
 - `simple_prompt`: the short prompt you want to tune/expand
 - `llm_provider`: `groq` or `ollama`
-- `model`: the LLM model identifier
+- `model`: the LLM model identifier  
+  - Groq dropdown includes only currently supported Groq IDs  
+  - Older workflows referencing deprecated Groq model IDs are auto-remapped to supported replacements
 - `style`: cinematic / anime / photorealistic / artistic / niji
 - `detail_level`: minimal / medium / detailed / extreme
 - `groq_api_key`: optional if `GROQ_API_KEY` is set
@@ -119,6 +122,11 @@ If `custom_instructions` is set:
 
 Note: if you want a negative prompt in full override mode, your `custom_instructions` must explicitly require the output format:
 `POSITIVE: ...` and `NEGATIVE: ...` (otherwise the node will fall back to a default negative prompt).
+
+## 🧩 Groq Model Compatibility Notes
+
+Groq periodically retires model IDs. This repo keeps the UI dropdown restricted to currently supported Groq IDs to reduce 400 errors.  
+For backward compatibility, the node also remaps a few common deprecated IDs used by older workflows to modern replacements.
 
 ## 📸 Example
 
