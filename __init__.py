@@ -7,7 +7,18 @@ class PromptTunerNode:
     ComfyUI node that tunes/expands simple prompts into detailed image generation prompts
     using free LLM APIs (Ollama local or Groq cloud).
     Supports custom instruction override/merge and exposes the effective system prompt for debugging.
+
+    Notes:
+    - Groq model IDs change over time. This node includes a remap for deprecated IDs
+      so older workflows don't hard-fail with HTTP 400.
     """
+
+    # Backward-compatibility: deprecated Groq model IDs -> supported replacements
+    GROQ_MODEL_REMAP = {
+        "llama3-70b-8192": "llama-3.3-70b-versatile",
+        "mixtral-8x7b-32768": "llama-3.3-70b-versatile",
+        "gemma2-9b-it": "llama-3.1-8b-instant",
+    }
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -18,12 +29,13 @@ class PromptTunerNode:
                     "multiline": True
                 }),
                 "llm_provider": (["groq", "ollama"], {"default": "groq"}),
+                # Keep this list to currently supported Groq IDs to avoid 400s from dead models.
+                # If you use Ollama, you must enter an Ollama-installed model name here (ComfyUI dropdown limitation).
                 "model": ([
                     "llama-3.3-70b-versatile",
                     "llama-3.1-8b-instant",
-                    "llama3-70b-8192",
-                    "mixtral-8x7b-32768",
-                    "gemma2-9b-it"
+                    "openai/gpt-oss-120b",
+                    "openai/gpt-oss-20b",
                 ], {"default": "llama-3.3-70b-versatile"}),
                 "style": (["cinematic", "anime", "photorealistic", "artistic", "niji"], {"default": "cinematic"}),
                 "detail_level": (["minimal", "medium", "detailed", "extreme"], {"default": "detailed"}),
@@ -40,6 +52,9 @@ class PromptTunerNode:
     RETURN_NAMES = ("positive_prompt", "negative_prompt", "system_prompt",)
     FUNCTION = "tune_prompt"
     CATEGORY = "Peteclt92/AI"
+
+    def _normalize_groq_model(self, model: str) -> str:
+        return self.GROQ_MODEL_REMAP.get(model, model)
 
     def get_system_prompt(self, style, detail_level, include_negative):
         detail_instructions = {
@@ -104,17 +119,20 @@ Rules:
             return "ERROR: Ollama request timed out"
         except requests.exceptions.HTTPError as e:
             status = getattr(getattr(e, "response", None), "status_code", None)
-            return f"ERROR: Ollama HTTP error{f' ({status})' if status else ''} - {str(e)}"
+            body = getattr(getattr(e, "response", None), "text", "")
+            return f"ERROR: Ollama HTTP error{f' ({status})' if status else ''} - {body[:800] if body else str(e)}"
         except Exception as e:
             return f"ERROR: Ollama error - {str(e)}"
 
     def call_groq(self, prompt, system_prompt, model, api_key):
-        """Call Groq API (free tier available)"""
+        """Call Groq API (OpenAI-compatible chat completions)"""
         if not api_key:
             api_key = os.environ.get("GROQ_API_KEY", "")
 
         if not api_key:
             return "ERROR: Groq API key required. Get free key at console.groq.com"
+
+        groq_model = self._normalize_groq_model(model)
 
         try:
             response = requests.post(
@@ -124,7 +142,7 @@ Rules:
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": model,
+                    "model": groq_model,
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": f"Tune this simple prompt into a detailed image generation prompt: {prompt}"}
@@ -137,13 +155,16 @@ Rules:
             response.raise_for_status()
             data = response.json()
             return data["choices"][0]["message"]["content"]
+
         except requests.exceptions.Timeout:
             return "ERROR: Groq request timed out"
         except requests.exceptions.HTTPError as e:
             status = getattr(getattr(e, "response", None), "status_code", None)
+            body = getattr(getattr(e, "response", None), "text", "")
             if status == 401:
                 return "ERROR: Invalid Groq API key"
-            return f"ERROR: Groq API HTTP error{f' ({status})' if status else ''} - {str(e)}"
+            # Include response body (truncated) so 400s explain exactly what Groq rejected.
+            return f"ERROR: Groq API HTTP error ({status}) - {body[:800] if body else str(e)}"
         except Exception as e:
             return f"ERROR: Groq error - {str(e)}"
 
