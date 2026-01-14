@@ -1,6 +1,6 @@
 # 🎛️ ComfyUI Prompt Tuner
 
-An LLM-powered prompt tuning node for ComfyUI. Turn short, rough prompts into detailed, model-ready **positive** prompts (and optionally **negative** prompts), using either Groq (cloud) or Ollama (local).
+An LLM-powered prompt tuning node for ComfyUI. Turn short prompts into detailed, model-ready **positive** prompts (and optionally **negative** prompts), using either Groq (cloud) or Ollama (local).
 
 ![ComfyUI](https://img.shields.io/badge/ComfyUI-Custom%20Node-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -13,7 +13,7 @@ An LLM-powered prompt tuning node for ComfyUI. Turn short, rough prompts into de
 - 📊 **4 Detail Levels**: minimal, medium, detailed, extreme
 - ✅ **Positive + Negative** prompt output (toggleable)
 - 🧩 **Custom instructions** with a clean override/merge model
-- 🪲 **Debug output**: shows the exact **system prompt** sent to the LLM (advanced node)
+- 🪲 **Debug output (advanced node)**: exposes the exact **system prompt** sent to the LLM
 
 ## 📦 Installation
 
@@ -33,7 +33,7 @@ Restart ComfyUI after installation.
 1. Go to https://console.groq.com
 2. Create an account
 3. Create an API key
-4. Paste the key into the node or set an environment variable:
+4. Paste the key into the node, or set an environment variable:
 
 **Windows (Command Prompt):**
 ```cmd
@@ -65,11 +65,16 @@ ollama serve
 
 ## 🎯 Nodes and Usage
 
-Nodes are located under: **BoraOzkut/AI** (category name preserved for compatibility)
+Nodes are located under: **Peteclt92/AI**
 
 ### Node: `🎛️ Prompt Tuner (LLM)` (Advanced)
 
-This node supports Groq + Ollama, styles, detail levels, negatives, and debugging.
+Supports Groq + Ollama, styles, detail levels, negative prompts, custom instructions, and debug output.
+
+**Default prompt example**
+```text
+a leopard resting on a large tree branch, three-quarter profile view
+```
 
 **Inputs**
 - `simple_prompt`: the short prompt you want to tune/expand
@@ -78,78 +83,54 @@ This node supports Groq + Ollama, styles, detail levels, negatives, and debuggin
 - `style`: cinematic / anime / photorealistic / artistic / niji
 - `detail_level`: minimal / medium / detailed / extreme
 - `groq_api_key`: optional if `GROQ_API_KEY` is set
-- `negative_prompt_request`: enable/disable negative prompt generation
 - `custom_instructions`: your own instruction block for the LLM
 - `merge_default_instructions`:
-  - `false` (default): if `custom_instructions` is set, it **fully overrides** the built-in style/detail rules
-  - `true`: if `custom_instructions` is set, it will be **appended** after the built-in style/detail rules
+  - `false` (default): if `custom_instructions` is set, it **fully overrides** the built-in style/detail instructions
+  - `true`: if `custom_instructions` is set, it will be **appended** after the built-in style/detail instructions
+- `output_negative_prompt`: generate a negative prompt section (true/false)
 
 **Outputs**
 - `positive_prompt`: tuned/expanded prompt
-- `negative_prompt`: negative prompt (generated or fallback default)
-- `system_prompt`: the exact system instruction text that was sent to the LLM (debugging)
+- `negative_prompt`: negative prompt (generated when parseable, otherwise a fallback default)
+- `system_prompt`: the exact instruction text that was sent to the LLM (debugging)
 
 ### Node: `🎛️ Prompt Tuner (Simple)`
 
 Ollama-only node with minimal controls.
 
+**Built-in behavior**
+- Uses a fixed, photorealistic instruction preset targeting ~150–200 words.
+- If `custom_instructions` is provided, it **fully overrides** the built-in instructions.
+
 **Inputs**
 - `simple_prompt`
-- `custom_instructions` (optional): if set, it **fully overrides** the built-in system instruction text
+- `custom_instructions` (optional)
 
 **Output**
 - `tuned_prompt`
 
-## 🧠 Custom Instructions: Override vs Merge
+## 🧠 Custom Instructions: Override vs Merge (Advanced Node)
 
-Default behavior is simple and predictable:
-
-If `custom_instructions` is empty, the node uses its built-in prompt engineering instructions (style + detail + formatting rules).
+If `custom_instructions` is empty, the node uses its built-in prompt engineering instructions (style + detail level + formatting rules).
 
 If `custom_instructions` is set:
 - With `merge_default_instructions = false`, your custom text becomes the **only** system prompt sent to the model.
 - With `merge_default_instructions = true`, the node sends **defaults first**, then your custom text after it.
 
-Tip: if you want a negative prompt in override mode, your `custom_instructions` must explicitly require the output format:
+Note: if you want a negative prompt in full override mode, your `custom_instructions` must explicitly require the output format:
 `POSITIVE: ...` and `NEGATIVE: ...` (otherwise the node will fall back to a default negative prompt).
 
 ## 📸 Example
 
 **Input**
 ```text
-boy, blonde, driving a car in San Francisco
+a leopard resting on a large tree branch, three-quarter profile view
 ```
 
-**Possible output (cinematic, detailed)**
+**Possible output (photorealistic, detailed)**
 ```text
-A young blonde-haired man driving a vintage convertible through San Francisco, golden hour sunlight casting warm highlights across the dashboard, soft lens flare, shallow depth of field, cinematic framing with the Golden Gate Bridge in the distance, teal-and-amber color grading, crisp textures and realistic materials, subtle motion blur on the background, atmospheric haze, film still quality, ultra-detailed, high resolution
+A powerful adult leopard resting along a thick, moss-dusted tree branch in a sunlit savanna woodland, three-quarter profile view with the head slightly turned toward the camera, alert amber eyes and fine whisker detail, short dense coat with crisp rosette patterning, subtle scars and natural fur clumping, dappled midday light filtering through leaves creating soft shadow shapes across the shoulder and flank, realistic bark texture and lichen, shallow depth of field with a gently blurred background canopy, natural color balance, high resolution, sharp focus on the face and paws, calm yet watchful mood, photorealistic detail, clean composition
 ```
-
-## 🔗 Workflow
-
-Example connection:
-
-```text
-┌─────────────────────────┐
-│   🎛️ Prompt Tuner (LLM)  │
-│   "simple prompt"        │
-└──┬──────────────┬────────┘
-   │              │
-   ▼              ▼
-┌───────────┐  ┌───────────┐
-│ positive  │  │ negative  │
-│ prompt    │  │ prompt    │
-└─────┬─────┘  └─────┬─────┘
-      │              │
-      ▼              ▼
-  (to your)      (to your)
-  sampler         sampler
-  /pipeline       /pipeline
-```
-
-### Included workflows
-
-- `workflow_z_image_turbo.json` (if present in the repo): ready-to-use workflow example
 
 ## 🛠️ Requirements
 
@@ -157,21 +138,10 @@ Example connection:
 - Python 3.10+
 - `requests` (commonly already present in ComfyUI environments)
 
-Optional:
-- ComfyUI-Custom-Scripts (ShowText helpers) if you like preview nodes in-graph
-
-## 🤝 Contributing
-
-PRs and issues are welcome:
-- bugs and edge cases
-- model/provider compatibility improvements
-- additional styles or output formats (JSON parsing, structured prompts, etc.)
-
 ## 📄 License
 
 MIT — see `LICENSE`.
 
 ## 🙏 Credits
 
-Original concept and base implementation by **Bora Ozkut**.  
-This fork continues development under the updated repository namespace.
+Original concept and base implementation by **Bora Ozkut**.
