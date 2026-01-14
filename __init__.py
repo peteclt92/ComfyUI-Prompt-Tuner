@@ -14,7 +14,7 @@ class PromptTunerNode:
         return {
             "required": {
                 "simple_prompt": ("STRING", {
-                    "default": "boy, blonde, driving a car in San Francisco",
+                    "default": "a leopard resting on a large tree branch, three-quarter profile view",
                     "multiline": True
                 }),
                 "llm_provider": (["groq", "ollama"], {"default": "groq"}),
@@ -32,14 +32,14 @@ class PromptTunerNode:
                 "groq_api_key": ("STRING", {"default": "", "multiline": False}),
                 "custom_instructions": ("STRING", {"default": "", "multiline": True}),
                 "merge_default_instructions": ("BOOLEAN", {"default": False}),
-                "negative_prompt_request": ("BOOLEAN", {"default": True}),
+                "output_negative_prompt": ("BOOLEAN", {"default": True}),
             }
         }
 
     RETURN_TYPES = ("STRING", "STRING", "STRING",)
     RETURN_NAMES = ("positive_prompt", "negative_prompt", "system_prompt",)
     FUNCTION = "tune_prompt"
-    CATEGORY = "BoraOzkut/AI"
+    CATEGORY = "Peteclt92/AI"
 
     def get_system_prompt(self, style, detail_level, include_negative):
         detail_instructions = {
@@ -116,8 +116,6 @@ Rules:
         if not api_key:
             return "ERROR: Groq API key required. Get free key at console.groq.com"
 
-        groq_model = model
-
         try:
             response = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
@@ -126,7 +124,7 @@ Rules:
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": groq_model,
+                    "model": model,
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": f"Tune this simple prompt into a detailed image generation prompt: {prompt}"}
@@ -176,24 +174,24 @@ Rules:
         groq_api_key="",
         custom_instructions="",
         merge_default_instructions=False,
-        negative_prompt_request=True
+        output_negative_prompt=True
     ):
         custom_text = (custom_instructions or "").strip()
 
         if custom_text:
             if merge_default_instructions:
-                system_prompt = self.get_system_prompt(style, detail_level, negative_prompt_request).rstrip() + "\n\n" + custom_text
+                system_prompt = self.get_system_prompt(style, detail_level, output_negative_prompt).rstrip() + "\n\n" + custom_text
             else:
                 system_prompt = custom_text
         else:
-            system_prompt = self.get_system_prompt(style, detail_level, negative_prompt_request)
+            system_prompt = self.get_system_prompt(style, detail_level, output_negative_prompt)
 
         if llm_provider == "ollama":
             response = self.call_ollama(simple_prompt, system_prompt, model)
         else:
             response = self.call_groq(simple_prompt, system_prompt, model, groq_api_key)
 
-        positive, negative = self.parse_response(response, negative_prompt_request)
+        positive, negative = self.parse_response(response, output_negative_prompt)
         return (positive, negative, system_prompt)
 
 
@@ -220,12 +218,18 @@ class PromptTunerSimpleNode:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("tuned_prompt",)
     FUNCTION = "tune"
-    CATEGORY = "BoraOzkut/AI"
+    CATEGORY = "Peteclt92/AI"
 
     def tune(self, simple_prompt, custom_instructions=""):
         built_in_system = (
-            "You are a prompt engineer. Tune simple prompts into detailed image generation prompts.\n"
-            "Add lighting, atmosphere, composition, quality tags. Output ONLY the tuned prompt, nothing else."
+            "Expand the following key concept or prompt to add more detail for a sota t2i model. "
+            "Create a detailed prompt with every possible detail, around 150-200 words.\n"
+            "Style focus: Focus on photorealistic details, natural lighting, real-world textures, authentic materials, high resolution.\n"
+            "Rules:\n"
+            "- Add specific details about lighting, atmosphere, composition, colors, textures\n"
+            "- Describe clothing, environment, mood, time of day when relevant\n"
+            "- Use comma-separated descriptive phrases\n"
+            "- DO NOT add any explanations, just output the prompt(s)"
         )
 
         system = (custom_instructions or "").strip() or built_in_system
